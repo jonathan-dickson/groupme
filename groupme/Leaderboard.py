@@ -1,18 +1,25 @@
 import requests
 import json
 import datetime
+import webbrowser
 
 
 ACCESS_TOKEN='<put your API key here>'
 TAMU_GROUP_ID = '59399869'
-FIGHT_CLUB_ID = '60989593'
+FIGHT_CLUB_ID = '67203699'
 
 GROUPME_BASE_URL = 'https://api.groupme.com/v3'
 USERS_GROUP_URL = '{}/groups?token={}'.format(GROUPME_BASE_URL, ACCESS_TOKEN)
 GROUP_MESSAGES_URL = '{}/groups/{}/messages?token={}&limit=100'.format(GROUPME_BASE_URL, FIGHT_CLUB_ID, ACCESS_TOKEN)
 # /groups/:group_id/likes?period=<day|week|month>
 LEADERBOARD_URL = '{}/groups/{}/likes?period=month&token={}'.format(GROUPME_BASE_URL, FIGHT_CLUB_ID, ACCESS_TOKEN)
+DESTROY_GROUP_URL = '{}/groups/{}/destroy'.format(GROUPME_BASE_URL, FIGHT_CLUB_ID)
 
+RESULTS_LIST = []
+
+def destroy_group():
+    r = requests.post(DESTROY_GROUP_URL)
+    print(r)
 
 def get_group_info():
     '''
@@ -26,19 +33,11 @@ def get_group_info():
     for group in j['response']:
         print("%s - %s" %(group['name'], group['group_id']))
 
-
-def get_group_message_info(before_id = None):
+def iterate_all_messages(message_operator):
     '''
     Parses each message recording the user, and words in the message.
     '''
-    if before_id == None:
-        url = GROUP_MESSAGES_URL
-    else:
-        url = GROUP_MESSAGES_URL + "&before_id={}".format(before_id)
-
-    word_message_map = {}
-    user_message_map = {}
-    total_message_count = 0
+    url = GROUP_MESSAGES_URL
     while True:
         r = requests.get(url)
         if r.status_code == 304:
@@ -51,43 +50,13 @@ def get_group_message_info(before_id = None):
         j = json.loads(r.content)
         messages = j['response']['messages']
         for message in messages:
-            # do message level work
-            total_message_count += 1
-            if message['name'] in user_message_map.keys():
-                user_count = user_message_map[message['name']]
-                user_message_map[message['name']] = user_count + 1
-            else:
-                user_message_map[message['name']] = 1
+            message_operator(message)
 
-            if message['text'] is not None:  # filter out image only posts.
-
-                #do word level work
-                words = message['text'].lower().split(' ')
-                for word in words:
-                    if word in word_message_map.keys():
-                        count = word_message_map[word]
-                        word_message_map[word] = count + 1
-                    else:
-                        word_message_map[word] = 1
-        
         if len(messages) < 1: 
             break
 
         last_message_id = messages[len(messages)-1]['id']
         url = GROUP_MESSAGES_URL + "&before_id={}".format(last_message_id)
-
-    with open('words.csv', 'w', encoding="utf8") as outfile:
-        for key, value in word_message_map.items():
-            try:
-                outfile.write('"{}","{}"\n'.format(key, value))
-            except: 
-                pass
-
-    with open('users.csv', 'w') as outfile:
-        for key, value in user_message_map.items():
-            outfile.write('"{}", {}\n'.format(key, value))
-
-
 
 
 def get_leaderboard_info():
@@ -105,6 +74,19 @@ def get_leaderboard_info():
     #print(j['response'])
 
 
-get_group_message_info()
+def get_images(message):
+    if 'attachments' in message.keys() and len(message['attachments']) > 0:
+        for attachment in message['attachments']:
+            if 'url' in attachment.keys():
+                RESULTS_LIST.append(attachment['url'])
+
+
+
+# destroy_group()
+#get_group_message_info()
 # get_group_info()
 # get_leaderboard_info()
+iterate_all_messages(get_images)
+
+for m in RESULTS_LIST:
+    print(m)

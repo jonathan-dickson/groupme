@@ -5,8 +5,8 @@ import webbrowser
 
 
 ACCESS_TOKEN='<put your API key here>'
-TAMU_GROUP_ID = '59399869'
-FIGHT_CLUB_ID = '67203699'
+TAMU_GROUP_ID = '<put group id here>'
+FIGHT_CLUB_ID = '<put group id here>'
 
 GROUPME_BASE_URL = 'https://api.groupme.com/v3'
 USERS_GROUP_URL = '{}/groups?token={}'.format(GROUPME_BASE_URL, ACCESS_TOKEN)
